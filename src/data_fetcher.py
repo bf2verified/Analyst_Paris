@@ -11,6 +11,10 @@ CACHE_TTL = 60 * 30  # 30 minutes
 FOOTBALL_DATA_BASE = "https://api.football-data.org/v4"
 API_FOOTBALL_BASE = "https://v3.football.api-sports.io"
 
+
+class ApiFootballError(Exception):
+    """Erreur renvoyée par api-football (quota, token invalide, etc.)."""
+
 # Cache: essaie le disque, sinon mémoire (filesystems éphémères: Fly, Railway, Vercel).
 _CACHE_DIR: Optional[Path]
 try:
@@ -120,7 +124,12 @@ class ApiFootballClient:
         url = f"{API_FOOTBALL_BASE}{path}"
         r = requests.get(url, headers=self.headers, params=params or {}, timeout=15)
         r.raise_for_status()
-        return r.json()
+        data = r.json()
+        # api-football renvoie {"errors": {...}} avec status 200 en cas de pb
+        errors = data.get("errors")
+        if errors and (isinstance(errors, dict) and errors or isinstance(errors, list) and errors):
+            raise ApiFootballError(f"api-football {path}: {errors}")
+        return data
 
     def search_team(self, name: str, league_id: int, season: int) -> Optional[int]:
         """Cherche un team_id api-football à partir du nom.
@@ -317,27 +326,35 @@ def build_match_dossier(home_team: str, away_team: str, competition: str = "PL")
     if af.enabled:
         league_id = af.league_id(competition)
         if league_id:
+            season = af.current_season()
+            enriched_count = 0
             try:
-                season = af.current_season()
                 home_id = af.search_team(home_team, league_id, season)
+                if not home_id:
+                    dossier["warnings"].append(f"api-football: '{home_team}' introuvable (ligue {league_id}, saison {season}).")
                 away_id = af.search_team(away_team, league_id, season)
-                enriched = False
+                if not away_id:
+                    dossier["warnings"].append(f"api-football: '{away_team}' introuvable (ligue {league_id}, saison {season}).")
                 if home_id:
                     agg = af.aggregate_match_stats(home_id, last=5)
                     if agg:
                         dossier["home_stats"].update(agg)
-                        enriched = True
+                        enriched_count += 1
+                    else:
+                        dossier["warnings"].append(f"api-football: pas de stats pour team_id={home_id}.")
                 if away_id:
                     agg = af.aggregate_match_stats(away_id, last=5)
                     if agg:
                         dossier["away_stats"].update(agg)
-                        enriched = True
-                if enriched:
-                    dossier["sources"].append("api-football.com (stats réelles)")
-                else:
-                    dossier["warnings"].append("api-football: équipes introuvables ou stats indisponibles.")
+                        enriched_count += 1
+                    else:
+                        dossier["warnings"].append(f"api-football: pas de stats pour team_id={away_id}.")
+                if enriched_count:
+                    dossier["sources"].append(f"api-football.com ({enriched_count}/2 équipes)")
+            except ApiFootballError as exc:
+                dossier["warnings"].append(str(exc))
             except requests.RequestException as exc:
-                dossier["warnings"].append(f"api-football: {exc}")
+                dossier["warnings"].append(f"api-football réseau: {exc}")
         else:
             dossier["warnings"].append(f"api-football: championnat {competition} non mappé.")
 
