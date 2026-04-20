@@ -1,0 +1,37 @@
+# fly.toml — Analyst Paris
+# Avant le premier déploiement: `fly launch --no-deploy` puis `fly deploy`.
+# N'oubliez pas: `fly secrets set ANTHROPIC_API_KEY=... FOOTBALL_DATA_API_KEY=...`
+
+app = "analyst-paris"
+primary_region = "cdg"   # Paris — changez au besoin
+
+[build]
+  dockerfile = "Dockerfile"
+
+[env]
+  PORT = "8080"
+  FLASK_ENV = "production"
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  auto_stop_machines = "stop"
+  auto_start_machines = true
+  min_machines_running = 0
+
+  [http_service.concurrency]
+    type = "requests"
+    hard_limit = 50
+    soft_limit = 40
+
+[[http_service.checks]]
+  interval = "30s"
+  timeout = "5s"
+  grace_period = "15s"
+  method = "GET"
+  path = "/api/health"
+
+[[vm]]
+  cpu_kind = "shared"
+  cpus = 1
+  memory = "512mb"

@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Analyst Paris — Analyse probabiliste des marchés de paris</title>
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+  <header>
+    <h1>⚽ Analyst Paris</h1>
+    <p class="subtitle">Analyse probabiliste — buts, corners, cartons, score exact, BTTS, handicap</p>
+  </header>
+
+  <div class="warning-banner">
+    <strong>⚠️ Avertissement :</strong> Aucune prédiction n'est garantie. Probabilités statistiques
+    (Poisson + IA). Jouez uniquement ce que vous pouvez perdre.
+  </div>
+
+  <main>
+    <section class="form-section">
+      <h2>Choisissez un championnat</h2>
+      <label>
+        Championnat
+        <select id="competition" name="competition">
+          <option value="PL">Premier League (Angleterre)</option>
+          <option value="PD">La Liga (Espagne)</option>
+          <option value="SA">Serie A (Italie)</option>
+          <option value="BL1">Bundesliga (Allemagne)</option>
+          <option value="FL1">Ligue 1 (France)</option>
+          <option value="CL">Champions League</option>
+          <option value="EL">Europa League</option>
+          <option value="WC">Coupe du Monde</option>
+        </select>
+      </label>
+    </section>
+
+    <section id="matches-section">
+      <h2>Matchs à venir</h2>
+      <div id="matches-loading" class="hidden">⏳ Chargement des rencontres...</div>
+      <div id="matches-list"></div>
+    </section>
+
+    <section id="results" class="results-section hidden">
+      <button id="back-btn" type="button">← Retour aux matchs</button>
+      <div id="loading" class="hidden">⏳ Analyse en cours...</div>
+      <div id="output"></div>
+    </section>
+
+    <section class="info-section">
+      <h2>Marchés analysés</h2>
+      <ul>
+        <li><strong>1X2 & Double chance</strong> — issue du match</li>
+        <li><strong>Buts Over/Under</strong> — total (1.5, 2.5, 3.5)</li>
+        <li><strong>BTTS</strong> — les deux équipes marquent</li>
+        <li><strong>Score exact</strong> — top 6</li>
+        <li><strong>Handicap européen</strong> — ±1</li>
+        <li><strong>Corners</strong> — total estimé</li>
+        <li><strong>Cartons</strong> — total estimé</li>
+        <li><strong>Minutes des buts</strong> — par quart d'heure</li>
+        <li><strong>Buts consécutifs</strong> — but affilé</li>
+        <li><strong>Origine du but</strong> — tir / tête / penalty / coup franc</li>
+      </ul>
+    </section>
+  </main>
+
+  <footer>
+    <p>Propulsé par Claude (Anthropic) + football-data.org · Jeu responsable · +18</p>
+  </footer>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>
