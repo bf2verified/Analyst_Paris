@@ -69,6 +69,35 @@ def teams(competition: str):
         return jsonify({"error": str(exc)}), 502
 
 
+@app.route("/api/upcoming/<competition>")
+def upcoming(competition: str):
+    fd = FootballDataClient()
+    if not fd.api_key:
+        return jsonify({
+            "error": "FOOTBALL_DATA_API_KEY manquant",
+            "hint": "Ajoutez la clé dans les variables d'environnement.",
+        }), 400
+    try:
+        data = fd.upcoming_matches(competition)
+        matches = []
+        for m in data.get("matches", []):
+            matches.append({
+                "id": m.get("id"),
+                "utc_date": m.get("utcDate"),
+                "status": m.get("status"),
+                "matchday": m.get("matchday"),
+                "home": m.get("homeTeam", {}).get("name"),
+                "away": m.get("awayTeam", {}).get("name"),
+                "home_crest": m.get("homeTeam", {}).get("crest"),
+                "away_crest": m.get("awayTeam", {}).get("crest"),
+                "competition": competition,
+            })
+        matches.sort(key=lambda x: x.get("utc_date") or "")
+        return jsonify(matches)
+    except Exception as exc:  # noqa: BLE001
+        return jsonify({"error": str(exc)}), 502
+
+
 @app.route("/api/analyze", methods=["POST"])
 def analyze():
     payload = request.get_json(force=True) or {}

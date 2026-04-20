@@ -13,39 +13,36 @@
   </header>
 
   <div class="warning-banner">
-    <strong>⚠️ Avertissement :</strong> Aucune prédiction n'est garantie. Cet outil fournit
-    des <em>probabilités statistiques</em> basées sur un modèle de Poisson et une synthèse IA.
-    Jouez uniquement ce que vous pouvez perdre. Le jeu comporte un risque de dépendance.
+    <strong>⚠️ Avertissement :</strong> Aucune prédiction n'est garantie. Probabilités statistiques
+    (Poisson + IA). Jouez uniquement ce que vous pouvez perdre.
   </div>
 
   <main>
     <section class="form-section">
-      <h2>Paramètres du match</h2>
-      <form id="match-form">
-        <label>
-          Championnat
-          <select id="competition" name="competition">
-            <option value="PL">Premier League (Angleterre)</option>
-            <option value="PD">La Liga (Espagne)</option>
-            <option value="SA">Serie A (Italie)</option>
-            <option value="BL1">Bundesliga (Allemagne)</option>
-            <option value="FL1">Ligue 1 (France)</option>
-            <option value="CL">Champions League</option>
-          </select>
-        </label>
-        <label>
-          Équipe domicile
-          <input type="text" id="home" name="home" placeholder="Ex: Manchester City" required />
-        </label>
-        <label>
-          Équipe extérieur
-          <input type="text" id="away" name="away" placeholder="Ex: Arsenal" required />
-        </label>
-        <button type="submit">Analyser le match</button>
-      </form>
+      <h2>Choisissez un championnat</h2>
+      <label>
+        Championnat
+        <select id="competition" name="competition">
+          <option value="PL">Premier League (Angleterre)</option>
+          <option value="PD">La Liga (Espagne)</option>
+          <option value="SA">Serie A (Italie)</option>
+          <option value="BL1">Bundesliga (Allemagne)</option>
+          <option value="FL1">Ligue 1 (France)</option>
+          <option value="CL">Champions League</option>
+          <option value="EL">Europa League</option>
+          <option value="WC">Coupe du Monde</option>
+        </select>
+      </label>
+    </section>
+
+    <section id="matches-section">
+      <h2>Matchs à venir</h2>
+      <div id="matches-loading" class="hidden">⏳ Chargement des rencontres...</div>
+      <div id="matches-list"></div>
     </section>
 
     <section id="results" class="results-section hidden">
+      <button id="back-btn" type="button">← Retour aux matchs</button>
       <div id="loading" class="hidden">⏳ Analyse en cours...</div>
       <div id="output"></div>
     </section>
@@ -54,27 +51,16 @@
       <h2>Marchés analysés</h2>
       <ul>
         <li><strong>1X2 & Double chance</strong> — issue du match</li>
-        <li><strong>Buts Over/Under</strong> — total de buts (1.5, 2.5, 3.5)</li>
+        <li><strong>Buts Over/Under</strong> — total (1.5, 2.5, 3.5)</li>
         <li><strong>BTTS</strong> — les deux équipes marquent</li>
-        <li><strong>Score exact</strong> — top 6 scores les plus probables</li>
+        <li><strong>Score exact</strong> — top 6</li>
         <li><strong>Handicap européen</strong> — ±1</li>
         <li><strong>Corners</strong> — total estimé</li>
         <li><strong>Cartons</strong> — total estimé</li>
-        <li><strong>Minutes des buts</strong> — distribution par quart d'heure</li>
-        <li><strong>Buts consécutifs</strong> — probabilité qu'une équipe marque 2 d'affilée</li>
-        <li><strong>Origine du but</strong> — tir / tête / penalty / coup franc (priors UEFA)</li>
+        <li><strong>Minutes des buts</strong> — par quart d'heure</li>
+        <li><strong>Buts consécutifs</strong> — but affilé</li>
+        <li><strong>Origine du but</strong> — tir / tête / penalty / coup franc</li>
       </ul>
-    </section>
-
-    <section class="info-section">
-      <h2>À propos de Poker TVBet</h2>
-      <p>
-        <strong>Nous n'incluons pas la prédiction de mains de poker TVBet.</strong>
-        Ces jeux utilisent un générateur de nombres aléatoires certifié — les résultats
-        sont <em>mathématiquement imprévisibles</em>. Tout service qui prétend le contraire
-        est frauduleux. La seule stratégie valable est la gestion de bankroll et la théorie
-        du poker (probabilités de main, cote du pot) — pas la prédiction.
-      </p>
     </section>
   </main>
 
