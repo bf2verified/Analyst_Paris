@@ -183,11 +183,33 @@ function renderResults(data) {
     </div></div>`;
 
   const c = analysis.corners;
-  html += `<div class="card"><h3>Corners — total attendu: ${c.expected_total_corners}</h3><div class="market-grid">
-    ${pill('Over 8.5', c['prob_over_8.5'])}
-    ${pill('Over 9.5', c['prob_over_9.5'])}
-    ${pill('Over 10.5', c['prob_over_10.5'])}
-    </div><p class="pick-meta">${escapeHtml(c.note)}</p></div>`;
+  html += `<div class="card"><h3>Corners</h3>
+    <p class="sub-stat">Total attendu: <strong>${c.expected_total_corners}</strong>
+      · ${escapeHtml(match.home)}: <strong>${c.expected_home_corners}</strong>
+      · ${escapeHtml(match.away)}: <strong>${c.expected_away_corners}</strong></p>
+
+    <h4 class="sub-head">Total match</h4>
+    <div class="market-grid">
+      ${pill('Over 8.5', c['prob_over_8.5'])}
+      ${pill('Over 9.5', c['prob_over_9.5'])}
+      ${pill('Over 10.5', c['prob_over_10.5'])}
+    </div>
+
+    <h4 class="sub-head">${escapeHtml(match.home)} (domicile)</h4>
+    <div class="market-grid">
+      ${pill('Over 3.5', c['prob_home_over_3.5'])}
+      ${pill('Over 4.5', c['prob_home_over_4.5'])}
+      ${pill('Over 5.5', c['prob_home_over_5.5'])}
+    </div>
+
+    <h4 class="sub-head">${escapeHtml(match.away)} (extérieur)</h4>
+    <div class="market-grid">
+      ${pill('Over 3.5', c['prob_away_over_3.5'])}
+      ${pill('Over 4.5', c['prob_away_over_4.5'])}
+      ${pill('Over 5.5', c['prob_away_over_5.5'])}
+    </div>
+
+    <p class="pick-meta">${escapeHtml(c.note)}</p></div>`;
 
   const ca = analysis.cards;
   html += `<div class="card"><h3>Cartons — total attendu: ${ca.expected_total_cards}</h3><div class="market-grid">

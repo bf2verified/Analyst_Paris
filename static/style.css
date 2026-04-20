@@ -244,7 +244,8 @@ footer {
 }
 #back-btn:hover { color: var(--text); border-color: var(--accent); }
 
-.sub-head { margin-top: 0.75rem; color: var(--muted); font-size: 0.9rem; }
+.sub-head { margin-top: 0.75rem; margin-bottom: 0.4rem; color: var(--muted); font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.5px; }
+.sub-stat { margin-bottom: 0.75rem; font-size: 0.95rem; }
 .bankroll { margin-top: 0.75rem; font-size: 0.9rem; }
 
 @media (max-width: 600px) {

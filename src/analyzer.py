@@ -109,19 +109,38 @@ def _handicap(matrix: List[List[float]]) -> Dict[str, float]:
 
 
 def corners_expectation(home_stats: dict, away_stats: dict) -> Dict[str, float]:
-    """Estime les corners attendus. Moyenne ligue ~10.5 par match."""
+    """Estime les corners attendus (total + par équipe). Moyenne ligue ~10.5 par match."""
     base = 10.5
     attack_factor = 1.0
     if home_stats.get("avg_goals_for") and away_stats.get("avg_goals_for"):
         goals = home_stats["avg_goals_for"] + away_stats["avg_goals_for"]
         attack_factor = goals / (LEAGUE_AVG_GOALS_HOME + LEAGUE_AVG_GOALS_AWAY)
-    expected = round(base * attack_factor, 2)
+    expected_total = round(base * attack_factor, 2)
+
+    # Répartition: équipe à domicile ~55% des corners (avantage du terrain).
+    home_share = 0.55
+    if home_stats.get("avg_goals_for") and away_stats.get("avg_goals_for"):
+        h = home_stats["avg_goals_for"]
+        a = away_stats["avg_goals_for"]
+        if h + a > 0:
+            home_share = max(0.35, min(0.70, 0.5 + 0.1 * (h - a) / max(h + a, 0.1)))
+    expected_home = round(expected_total * home_share, 2)
+    expected_away = round(expected_total * (1 - home_share), 2)
+
     return {
-        "expected_total_corners": expected,
-        "prob_over_8.5": round(_poisson_over(expected, 9), 3),
-        "prob_over_9.5": round(_poisson_over(expected, 10), 3),
-        "prob_over_10.5": round(_poisson_over(expected, 11), 3),
-        "note": "Estimation basée sur l'agressivité offensive; utilisez API-Football pour corners réels.",
+        "expected_total_corners": expected_total,
+        "expected_home_corners": expected_home,
+        "expected_away_corners": expected_away,
+        "prob_over_8.5": round(_poisson_over(expected_total, 9), 3),
+        "prob_over_9.5": round(_poisson_over(expected_total, 10), 3),
+        "prob_over_10.5": round(_poisson_over(expected_total, 11), 3),
+        "prob_home_over_3.5": round(_poisson_over(expected_home, 4), 3),
+        "prob_home_over_4.5": round(_poisson_over(expected_home, 5), 3),
+        "prob_home_over_5.5": round(_poisson_over(expected_home, 6), 3),
+        "prob_away_over_3.5": round(_poisson_over(expected_away, 4), 3),
+        "prob_away_over_4.5": round(_poisson_over(expected_away, 5), 3),
+        "prob_away_over_5.5": round(_poisson_over(expected_away, 6), 3),
+        "note": "Estimation basée sur l'agressivité offensive + avantage du terrain (~55/45). Utilisez API-Football pour corners réels.",
     }
 
 
