@@ -95,8 +95,13 @@ def analyze():
 
 @app.route("/api/health")
 def health():
+    # Must stay minimal — used by Railway/Fly healthchecks at startup.
+    return jsonify({"status": "ok"}), 200
+
+
+@app.route("/api/status")
+def status():
     return jsonify({
-        "status": "ok",
         "ai_enabled": predictor.enabled,
         "football_data_configured": bool(os.getenv("FOOTBALL_DATA_API_KEY")),
         "api_football_configured": bool(os.getenv("API_FOOTBALL_KEY")),
