@@ -123,20 +123,32 @@ class ApiFootballClient:
         return r.json()
 
     def search_team(self, name: str, league_id: int, season: int) -> Optional[int]:
-        """Cherche un team_id api-football à partir du nom."""
-        key = f"af_search_{league_id}_{season}_{name.lower()}"
-        data = _cached_get(
-            key,
-            lambda: self._get("/teams", {"search": name[:20], "league": league_id, "season": season}),
-        )
-        if not data or not data.get("response"):
-            return None
-        # match le plus proche
-        for entry in data["response"]:
-            t = entry.get("team", {})
-            if t.get("name", "").lower() == name.lower():
-                return t.get("id")
-        return data["response"][0]["team"]["id"]
+        """Cherche un team_id api-football à partir du nom.
+
+        Stratégie: essaie plusieurs variantes de nom (strip suffixes communs) et
+        plusieurs saisons (courante + précédente), puis filtre par league si possible.
+        """
+        variants = _name_variants(name)
+        for variant in variants:
+            if len(variant) < 3:
+                continue
+            # D'abord filtré par ligue/saison, puis sans filtre si rien.
+            for params in (
+                {"search": variant, "league": league_id, "season": season},
+                {"search": variant, "league": league_id, "season": season - 1},
+                {"search": variant},
+            ):
+                key = f"af_search_{hash(tuple(sorted(params.items())))}"
+                try:
+                    data = _cached_get(key, lambda p=params: self._get("/teams", p))
+                except requests.RequestException:
+                    continue
+                if not data or not data.get("response"):
+                    continue
+                tid = _best_match(data["response"], name)
+                if tid:
+                    return tid
+        return None
 
     def team_statistics(self, team_id: int, league_id: int, season: int):
         key = f"af_teamstats_{team_id}_{league_id}_{season}"
@@ -189,6 +201,55 @@ class ApiFootballClient:
                 result[f"avg_{k}"] = round(sum(values) / len(values), 2)
         result["sample_size"] = len(fixtures["response"])
         return result if result else None
+
+
+def _name_variants(name: str) -> list:
+    """Génère des variantes du nom: original, sans suffixe (FC, CF, AFC...), tokens principaux."""
+    cleaned = name.strip()
+    variants = [cleaned]
+    # Retire suffixes et préfixes communs
+    import re
+    stripped = re.sub(r"\b(FC|CF|AFC|AC|SC|CA|SCO|OSC|OGC|RC|SS|AS|USA|IF)\b", "", cleaned, flags=re.IGNORECASE).strip()
+    stripped = re.sub(r"\s+", " ", stripped)
+    if stripped and stripped != cleaned:
+        variants.append(stripped)
+    # Tokens principaux: "Paris Saint-Germain FC" -> "Paris Saint-Germain", puis "Paris"
+    tokens = stripped.split()
+    if len(tokens) >= 2:
+        variants.append(" ".join(tokens[:2]))
+    if tokens:
+        variants.append(tokens[0])
+    # Déduplication en conservant l'ordre
+    seen = set()
+    result = []
+    for v in variants:
+        lv = v.lower()
+        if lv and lv not in seen:
+            seen.add(lv)
+            result.append(v)
+    return result
+
+
+def _best_match(response: list, name: str) -> Optional[int]:
+    """Choisit la meilleure correspondance dans la réponse api-football."""
+    nlower = name.lower()
+    # Exact match
+    for entry in response:
+        t = entry.get("team", {})
+        if t.get("name", "").lower() == nlower:
+            return t.get("id")
+    # Préfixe/substring
+    for entry in response:
+        t = entry.get("team", {})
+        tn = t.get("name", "").lower()
+        if tn and (tn.startswith(nlower) or nlower.startswith(tn) or nlower in tn):
+            return t.get("id")
+    # Fallback: premier résultat (club, pas équipe nationale si possible)
+    for entry in response:
+        t = entry.get("team", {})
+        if not t.get("national"):
+            return t.get("id")
+    return response[0].get("team", {}).get("id") if response else None
 
 
 def _accumulate(buckets: dict, stat_type: Optional[str], value) -> None:

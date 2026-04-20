@@ -13,7 +13,7 @@ try:
 except Exception:
     pass
 
-from src.data_fetcher import build_match_dossier, FootballDataClient
+from src.data_fetcher import build_match_dossier, FootballDataClient, ApiFootballClient, _name_variants
 from src.analyzer import analyse_match
 from src.ai_predictor import AIPredictor
 
@@ -127,6 +127,42 @@ def analyze():
     except Exception as exc:  # noqa: BLE001
         app.logger.exception("analyze failed")
         return jsonify({"error": f"Erreur serveur: {exc}"}), 500
+
+
+@app.route("/api/debug/af/<competition>/<name>")
+def debug_af(competition: str, name: str):
+    """Diagnostic: voir ce que api-football retourne pour un nom d'équipe."""
+    af = ApiFootballClient()
+    if not af.enabled:
+        return jsonify({"error": "API_FOOTBALL_KEY non configuré"}), 400
+    league_id = af.league_id(competition)
+    if not league_id:
+        return jsonify({"error": f"Championnat {competition} non mappé"}), 400
+    season = af.current_season()
+    variants = _name_variants(name)
+    tries = []
+    for v in variants:
+        if len(v) < 3:
+            continue
+        try:
+            data = af._get("/teams", {"search": v, "league": league_id, "season": season})
+            tries.append({
+                "variant": v, "season": season,
+                "results_count": len(data.get("response", [])) if data else 0,
+                "first_result": data["response"][0]["team"] if data and data.get("response") else None,
+            })
+        except Exception as exc:  # noqa: BLE001
+            tries.append({"variant": v, "error": str(exc)})
+    resolved = af.search_team(name, league_id, season)
+    return jsonify({
+        "competition": competition,
+        "league_id": league_id,
+        "season": season,
+        "name": name,
+        "variants_tried": variants,
+        "searches": tries,
+        "resolved_team_id": resolved,
+    })
 
 
 @app.errorhandler(500)
