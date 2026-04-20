@@ -45,11 +45,16 @@ class AIPredictor:
     def __init__(self, api_key: Optional[str] = None):
         self.api_key = api_key or os.getenv("ANTHROPIC_API_KEY", "")
         self.client = None
-        if Anthropic and self.api_key:
+        self.init_error: Optional[str] = None
+        if not self.api_key:
+            self.init_error = "Variable ANTHROPIC_API_KEY non détectée dans l'environnement."
+        elif Anthropic is None:
+            self.init_error = "Package anthropic non installé (vérifiez requirements.txt)."
+        else:
             try:
                 self.client = Anthropic(api_key=self.api_key)
-            except Exception:
-                self.client = None
+            except Exception as exc:  # noqa: BLE001
+                self.init_error = f"Échec initialisation client Anthropic: {exc}"
 
     @property
     def enabled(self) -> bool:
@@ -60,7 +65,7 @@ class AIPredictor:
             return {
                 "resume": "IA non configurée — synthèse statistique uniquement.",
                 "paris_conseilles": [],
-                "risques": ["Clé ANTHROPIC_API_KEY absente."],
+                "risques": [self.init_error or "Raison inconnue."],
                 "conseil_gestion": "Jouez de manière responsable. Ne misez jamais plus que vous ne pouvez perdre.",
             }
 
