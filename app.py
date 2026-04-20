@@ -149,16 +149,14 @@ def health():
 
 @app.route("/api/status")
 def status():
-    anthropic_key = os.getenv("ANTHROPIC_API_KEY", "")
-    football_key = os.getenv("FOOTBALL_DATA_API_KEY", "")
     return jsonify({
         "ai_enabled": predictor.enabled,
+        "ai_provider": predictor.provider,
+        "ai_model": predictor.model_label,
         "ai_init_error": predictor.init_error,
-        "anthropic_key_detected": bool(anthropic_key),
-        "anthropic_key_length": len(anthropic_key),
-        "anthropic_key_prefix": anthropic_key[:10] if anthropic_key else None,
-        "football_data_configured": bool(football_key),
-        "football_data_key_length": len(football_key),
+        "groq_key_detected": bool(os.getenv("GROQ_API_KEY")),
+        "anthropic_key_detected": bool(os.getenv("ANTHROPIC_API_KEY")),
+        "football_data_configured": bool(os.getenv("FOOTBALL_DATA_API_KEY")),
         "api_football_configured": bool(os.getenv("API_FOOTBALL_KEY")),
     })
 

@@ -132,7 +132,7 @@ function renderResults(data) {
     · Total : <strong>${analysis.expected_goals.total}</strong></p></div>`;
 
   if (ai_summary) {
-    html += `<div class="card ai-block"><h3>🧠 Synthèse IA (Claude)</h3>
+    html += `<div class="card ai-block"><h3>🧠 Synthèse IA</h3>
       <p>${escapeHtml(ai_summary.resume || '')}</p>`;
     if (ai_summary.paris_conseilles?.length) {
       html += `<h4 class="sub-head">Paris à valeur identifiés</h4>`;
