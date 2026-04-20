@@ -270,21 +270,25 @@ function renderResults(data) {
   const statKeys = ['shots_on_target','total_shots','fouls','substitutions','goal_kicks','throw_ins','offsides'];
   html += `<div class="card"><h3>Statistiques détaillées du match</h3>
     <table class="stats-table">
-      <thead><tr><th>Statistique</th><th>${escapeHtml(match.home)}</th><th>${escapeHtml(match.away)}</th><th>Total</th></tr></thead>
+      <thead><tr><th>Statistique</th><th>${escapeHtml(match.home)}</th><th>${escapeHtml(match.away)}</th><th>Total</th><th>Source</th></tr></thead>
       <tbody>`;
   statKeys.forEach(k => {
     const s = ms[k];
     if (!s) return;
+    const badge = s.source === 'api-football' ? '<span class="badge real">réel</span>' : '<span class="badge est">estim.</span>';
     html += `<tr><td>${escapeHtml(s.label)}</td>
       <td><strong>${s.expected_home}</strong></td>
       <td><strong>${s.expected_away}</strong></td>
-      <td><strong>${s.expected_total}</strong></td></tr>`;
+      <td><strong>${s.expected_total}</strong></td>
+      <td>${badge}</td></tr>`;
   });
   if (ms.possession) {
+    const badge = ms.possession.source === 'api-football' ? '<span class="badge real">réel</span>' : '<span class="badge est">estim.</span>';
     html += `<tr><td>${escapeHtml(ms.possession.label)}</td>
       <td><strong>${ms.possession.home_pct}%</strong></td>
       <td><strong>${ms.possession.away_pct}%</strong></td>
-      <td><strong>100%</strong></td></tr>`;
+      <td><strong>100%</strong></td>
+      <td>${badge}</td></tr>`;
   }
   html += `</tbody></table>`;
 

@@ -270,6 +270,18 @@ footer {
 }
 .stats-table tr:hover { background: rgba(62,166,255,0.04); }
 
+.badge {
+  display: inline-block;
+  padding: 0.2rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+.badge.real { background: rgba(74,222,128,0.15); color: var(--success); border: 1px solid rgba(74,222,128,0.4); }
+.badge.est { background: rgba(255,184,77,0.1); color: var(--accent-warm); border: 1px solid rgba(255,184,77,0.3); }
+
 .sub-row {
   display: grid;
   grid-template-columns: 110px 1fr;

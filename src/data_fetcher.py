@@ -92,7 +92,12 @@ class FootballDataClient:
 class ApiFootballClient:
     """Client pour api-football.com (freemium, fournit corners, cartons, tirs...)."""
 
-    def __init__(self, api_key: str | None = None):
+    LEAGUE_MAP = {
+        "PL": 39, "PD": 140, "SA": 135, "BL1": 78, "FL1": 61,
+        "CL": 2, "EL": 3, "WC": 1, "EC": 4,
+    }
+
+    def __init__(self, api_key: Optional[str] = None):
         self.api_key = api_key or os.getenv("API_FOOTBALL_KEY", "")
         self.headers = {"x-apisports-key": self.api_key} if self.api_key else {}
 
@@ -100,13 +105,38 @@ class ApiFootballClient:
     def enabled(self) -> bool:
         return bool(self.api_key)
 
-    def _get(self, path: str, params: dict | None = None):
+    def league_id(self, competition_code: str) -> Optional[int]:
+        return self.LEAGUE_MAP.get(competition_code)
+
+    def current_season(self) -> int:
+        """Saison européenne en cours (ex: juillet 2025 -> 2025)."""
+        from datetime import datetime
+        now = datetime.utcnow()
+        return now.year if now.month >= 7 else now.year - 1
+
+    def _get(self, path: str, params: Optional[dict] = None):
         if not self.enabled:
             return None
         url = f"{API_FOOTBALL_BASE}{path}"
         r = requests.get(url, headers=self.headers, params=params or {}, timeout=15)
         r.raise_for_status()
         return r.json()
+
+    def search_team(self, name: str, league_id: int, season: int) -> Optional[int]:
+        """Cherche un team_id api-football à partir du nom."""
+        key = f"af_search_{league_id}_{season}_{name.lower()}"
+        data = _cached_get(
+            key,
+            lambda: self._get("/teams", {"search": name[:20], "league": league_id, "season": season}),
+        )
+        if not data or not data.get("response"):
+            return None
+        # match le plus proche
+        for entry in data["response"]:
+            t = entry.get("team", {})
+            if t.get("name", "").lower() == name.lower():
+                return t.get("id")
+        return data["response"][0]["team"]["id"]
 
     def team_statistics(self, team_id: int, league_id: int, season: int):
         key = f"af_teamstats_{team_id}_{league_id}_{season}"
@@ -129,6 +159,60 @@ class ApiFootballClient:
             f"af_last_{team_id}_{last}",
             lambda: self._get("/fixtures", {"team": team_id, "last": last}),
         )
+
+    def aggregate_match_stats(self, team_id: int, last: int = 5) -> Optional[dict]:
+        """Moyennes sur les N derniers matchs: tirs, cadrés, corners, fautes, hors-jeu, possession."""
+        fixtures = self.last_fixtures(team_id, last=last)
+        if not fixtures or not fixtures.get("response"):
+            return None
+
+        buckets = {
+            "shots_on_target": [], "total_shots": [], "corners": [],
+            "fouls": [], "offsides": [], "possession": [],
+        }
+        for fx in fixtures["response"]:
+            fid = fx.get("fixture", {}).get("id")
+            if not fid:
+                continue
+            stats = self.fixture_statistics(fid)
+            if not stats or not stats.get("response"):
+                continue
+            for side in stats["response"]:
+                if side.get("team", {}).get("id") != team_id:
+                    continue
+                for item in side.get("statistics", []):
+                    _accumulate(buckets, item.get("type"), item.get("value"))
+
+        result = {}
+        for k, values in buckets.items():
+            if values:
+                result[f"avg_{k}"] = round(sum(values) / len(values), 2)
+        result["sample_size"] = len(fixtures["response"])
+        return result if result else None
+
+
+def _accumulate(buckets: dict, stat_type: Optional[str], value) -> None:
+    mapping = {
+        "Shots on Goal": "shots_on_target",
+        "Total Shots": "total_shots",
+        "Corner Kicks": "corners",
+        "Fouls": "fouls",
+        "Offsides": "offsides",
+        "Ball Possession": "possession",
+    }
+    key = mapping.get(stat_type or "")
+    if not key or value is None:
+        return
+    if isinstance(value, str) and value.endswith("%"):
+        try:
+            buckets[key].append(float(value.rstrip("%")))
+        except ValueError:
+            return
+    else:
+        try:
+            buckets[key].append(float(value))
+        except (TypeError, ValueError):
+            return
 
 
 def build_match_dossier(home_team: str, away_team: str, competition: str = "PL") -> dict:
@@ -170,10 +254,31 @@ def build_match_dossier(home_team: str, away_team: str, competition: str = "PL")
         dossier["warnings"].append(f"football-data.org: {exc}")
 
     if af.enabled:
-        dossier["sources"].append("api-football.com")
-        dossier["warnings"].append(
-            "Pour corners/cartons détaillés, mappez vos IDs d'équipe api-football."
-        )
+        league_id = af.league_id(competition)
+        if league_id:
+            try:
+                season = af.current_season()
+                home_id = af.search_team(home_team, league_id, season)
+                away_id = af.search_team(away_team, league_id, season)
+                enriched = False
+                if home_id:
+                    agg = af.aggregate_match_stats(home_id, last=5)
+                    if agg:
+                        dossier["home_stats"].update(agg)
+                        enriched = True
+                if away_id:
+                    agg = af.aggregate_match_stats(away_id, last=5)
+                    if agg:
+                        dossier["away_stats"].update(agg)
+                        enriched = True
+                if enriched:
+                    dossier["sources"].append("api-football.com (stats réelles)")
+                else:
+                    dossier["warnings"].append("api-football: équipes introuvables ou stats indisponibles.")
+            except requests.RequestException as exc:
+                dossier["warnings"].append(f"api-football: {exc}")
+        else:
+            dossier["warnings"].append(f"api-football: championnat {competition} non mappé.")
 
     return dossier
 
