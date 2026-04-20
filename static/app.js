@@ -266,6 +266,56 @@ function renderResults(data) {
     ${pill('Sur coup franc', go.prob_any_goal_from_free_kick)}
     </div><p class="pick-meta">${escapeHtml(go.note)}</p></div>`;
 
+  const ms = analysis.match_stats || {};
+  const statKeys = ['shots_on_target','total_shots','fouls','substitutions','goal_kicks','throw_ins','offsides'];
+  html += `<div class="card"><h3>Statistiques détaillées du match</h3>
+    <table class="stats-table">
+      <thead><tr><th>Statistique</th><th>${escapeHtml(match.home)}</th><th>${escapeHtml(match.away)}</th><th>Total</th></tr></thead>
+      <tbody>`;
+  statKeys.forEach(k => {
+    const s = ms[k];
+    if (!s) return;
+    html += `<tr><td>${escapeHtml(s.label)}</td>
+      <td><strong>${s.expected_home}</strong></td>
+      <td><strong>${s.expected_away}</strong></td>
+      <td><strong>${s.expected_total}</strong></td></tr>`;
+  });
+  if (ms.possession) {
+    html += `<tr><td>${escapeHtml(ms.possession.label)}</td>
+      <td><strong>${ms.possession.home_pct}%</strong></td>
+      <td><strong>${ms.possession.away_pct}%</strong></td>
+      <td><strong>100%</strong></td></tr>`;
+  }
+  html += `</tbody></table>`;
+
+  // OU par statistique
+  statKeys.forEach(k => {
+    const s = ms[k];
+    if (!s || !Object.keys(s.total_ou || {}).length) return;
+    html += `<h4 class="sub-head">${escapeHtml(s.label)} — Over/Under</h4>`;
+    html += `<div class="sub-row"><span class="sub-label">Total</span><div class="market-grid">`;
+    for (const [name, p] of Object.entries(s.total_ou)) {
+      html += pill(formatOuLabel(name), p);
+    }
+    html += `</div></div>`;
+    if (Object.keys(s.home_ou || {}).length) {
+      html += `<div class="sub-row"><span class="sub-label">${escapeHtml(match.home)}</span><div class="market-grid">`;
+      for (const [name, p] of Object.entries(s.home_ou)) {
+        html += pill(formatOuLabel(name), p);
+      }
+      html += `</div></div>`;
+    }
+    if (Object.keys(s.away_ou || {}).length) {
+      html += `<div class="sub-row"><span class="sub-label">${escapeHtml(match.away)}</span><div class="market-grid">`;
+      for (const [name, p] of Object.entries(s.away_ou)) {
+        html += pill(formatOuLabel(name), p);
+      }
+      html += `</div></div>`;
+    }
+  });
+  if (ms._note) html += `<p class="pick-meta">${escapeHtml(ms._note)}</p>`;
+  html += `</div>`;
+
   if (dossier.sources?.length || dossier.warnings?.length) {
     html += `<div class="card"><h3>Sources & avertissements</h3>`;
     if (dossier.sources?.length) html += `<p>Sources : ${dossier.sources.join(', ')}</p>`;
@@ -276,6 +326,13 @@ function renderResults(data) {
   html += `<div class="disclaimer">${escapeHtml(disclaimer)}</div>`;
   output.innerHTML = html;
   window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function formatOuLabel(name) {
+  // "over_4.5" -> "Over 4.5"
+  const [direction, value] = name.split('_');
+  const cap = direction.charAt(0).toUpperCase() + direction.slice(1);
+  return `${cap} ${value}`;
 }
 
 function escapeHtml(s) {

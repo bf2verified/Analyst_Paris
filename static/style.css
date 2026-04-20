@@ -246,6 +246,47 @@ footer {
 
 .sub-head { margin-top: 0.75rem; margin-bottom: 0.4rem; color: var(--muted); font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.5px; }
 .sub-stat { margin-bottom: 0.75rem; font-size: 0.95rem; }
+
+.stats-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 1rem;
+  font-size: 0.9rem;
+}
+.stats-table th, .stats-table td {
+  padding: 0.55rem 0.7rem;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+}
+.stats-table th {
+  color: var(--muted);
+  font-weight: 600;
+  font-size: 0.82rem;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+.stats-table td:not(:first-child) {
+  text-align: center;
+}
+.stats-table tr:hover { background: rgba(62,166,255,0.04); }
+
+.sub-row {
+  display: grid;
+  grid-template-columns: 110px 1fr;
+  gap: 0.6rem;
+  align-items: start;
+  margin-bottom: 0.6rem;
+}
+.sub-label {
+  color: var(--muted);
+  font-size: 0.85rem;
+  padding-top: 0.6rem;
+}
+
+@media (max-width: 600px) {
+  .sub-row { grid-template-columns: 1fr; }
+  .sub-label { padding-top: 0; font-weight: 600; }
+}
 .bankroll { margin-top: 0.75rem; font-size: 0.9rem; }
 
 @media (max-width: 600px) {

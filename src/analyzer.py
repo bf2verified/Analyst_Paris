@@ -243,6 +243,80 @@ def consecutive_goals(lam_h: float, lam_a: float) -> Dict[str, float]:
     }
 
 
+def match_stats_expectation(home_stats: dict, away_stats: dict) -> Dict[str, Dict]:
+    """Statistiques détaillées du match (tirs, fautes, possession, etc.).
+
+    Basé sur moyennes ligue et force offensive relative. Pour des valeurs exactes
+    par match, utilisez api-football.com (fixtures/statistics).
+    """
+    attack_factor = 1.0
+    if home_stats.get("avg_goals_for") and away_stats.get("avg_goals_for"):
+        goals = home_stats["avg_goals_for"] + away_stats["avg_goals_for"]
+        attack_factor = goals / (LEAGUE_AVG_GOALS_HOME + LEAGUE_AVG_GOALS_AWAY)
+
+    # Moyennes ligue (Premier League, Ligue 1 etc.) + part domicile typique
+    baselines = {
+        "shots_on_target": {"label": "Tirs cadrés", "total": 9.0, "home_share": 0.55,
+                            "scales_with_attack": True, "ou": [3.5, 4.5, 5.5, 8.5, 10.5]},
+        "total_shots":     {"label": "Tirs vers le but", "total": 25.5, "home_share": 0.55,
+                            "scales_with_attack": True, "ou": [10.5, 12.5, 14.5, 22.5, 26.5]},
+        "fouls":           {"label": "Fautes", "total": 22.0, "home_share": 0.48,
+                            "scales_with_attack": False, "ou": [9.5, 10.5, 11.5, 20.5, 24.5]},
+        "substitutions":   {"label": "Remplacements", "total": 10.0, "home_share": 0.50,
+                            "scales_with_attack": False, "ou": [4.5, 5.5, 8.5, 10.5]},
+        "goal_kicks":      {"label": "Dégagements de but", "total": 19.0, "home_share": 0.45,
+                            "scales_with_attack": False, "ou": [7.5, 9.5, 10.5, 18.5, 22.5]},
+        "throw_ins":       {"label": "Touches", "total": 45.0, "home_share": 0.50,
+                            "scales_with_attack": False, "ou": [20.5, 22.5, 40.5, 48.5]},
+        "offsides":        {"label": "Hors-jeu", "total": 4.2, "home_share": 0.52,
+                            "scales_with_attack": True, "ou": [1.5, 2.5, 3.5, 4.5]},
+    }
+
+    result: Dict[str, Dict] = {}
+    for key, cfg in baselines.items():
+        factor = attack_factor if cfg["scales_with_attack"] else 1.0
+        total = round(cfg["total"] * factor, 2)
+        home = round(total * cfg["home_share"], 2)
+        away = round(total - home, 2)
+        entry = {
+            "label": cfg["label"],
+            "expected_total": total,
+            "expected_home": home,
+            "expected_away": away,
+            "total_ou": {},
+            "home_ou": {},
+            "away_ou": {},
+        }
+        for t in cfg["ou"]:
+            entry["total_ou"][f"over_{t}"] = round(_poisson_over(total, int(t) + 1), 3)
+        # OU par équipe uniquement sur les seuils < moitié du total
+        for t in cfg["ou"]:
+            if t < total / 2:
+                entry["home_ou"][f"over_{t}"] = round(_poisson_over(home, int(t) + 1), 3)
+                entry["away_ou"][f"over_{t}"] = round(_poisson_over(away, int(t) + 1), 3)
+        result[key] = entry
+
+    # Possession: total = 100%, on répartit selon l'écart d'attaque
+    home_poss = 50.0
+    if home_stats.get("avg_goals_for") and away_stats.get("avg_goals_for"):
+        h, a = home_stats["avg_goals_for"], away_stats["avg_goals_for"]
+        if h + a > 0:
+            home_poss = 50 + 10 * (h - a) / max(h + a, 0.1)
+            home_poss = max(35.0, min(65.0, home_poss))
+    result["possession"] = {
+        "label": "Possession de balle",
+        "home_pct": round(home_poss, 1),
+        "away_pct": round(100 - home_poss, 1),
+        "total_pct": 100.0,
+    }
+
+    result["_note"] = (
+        "Estimations basées sur moyennes ligue et force offensive relative. "
+        "Pour des valeurs exactes par match, connectez api-football.com."
+    )
+    return result
+
+
 def goal_from_shot_estimate(home_stats: dict, away_stats: dict) -> Dict[str, float]:
     """Probabilité qu'un but vienne d'un tir (toujours vrai en football ~95%).
 
@@ -270,4 +344,5 @@ def analyse_match(home_stats: dict, away_stats: dict) -> dict:
         "goal_minutes_total": goal_minutes_total(lam_h, lam_a),
         "consecutive_goals": consecutive_goals(lam_h, lam_a),
         "goal_origin": goal_from_shot_estimate(home_stats, away_stats),
+        "match_stats": match_stats_expectation(home_stats, away_stats),
     }
