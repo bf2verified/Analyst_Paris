@@ -21,4 +21,4 @@ EXPOSE 8080
 HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
     CMD curl -f http://localhost:${PORT}/api/health || exit 1
 
-CMD gunicorn app:app --bind 0.0.0.0:${PORT} --workers 1 --timeout 120 --preload --access-logfile -
+CMD ["gunicorn", "app:app", "-c", "gunicorn.conf.py"]

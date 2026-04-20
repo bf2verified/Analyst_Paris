@@ -3,6 +3,7 @@ import os
 import time
 import json
 from pathlib import Path
+from typing import Optional, Dict, Tuple
 import requests
 
 CACHE_TTL = 60 * 30  # 30 minutes
@@ -11,17 +12,17 @@ FOOTBALL_DATA_BASE = "https://api.football-data.org/v4"
 API_FOOTBALL_BASE = "https://v3.football.api-sports.io"
 
 # Cache: essaie le disque, sinon mémoire (filesystems éphémères: Fly, Railway, Vercel).
-_CACHE_DIR: Path | None
+_CACHE_DIR: Optional[Path]
 try:
-    _CACHE_DIR = Path(os.getenv("CACHE_DIR", Path(__file__).resolve().parent.parent / "cache"))
+    _dir = os.getenv("CACHE_DIR") or str(Path(__file__).resolve().parent.parent / "cache")
+    _CACHE_DIR = Path(_dir)
     _CACHE_DIR.mkdir(exist_ok=True, parents=True)
-    # test d'écriture
     (_CACHE_DIR / ".probe").write_text("ok")
     (_CACHE_DIR / ".probe").unlink()
-except (OSError, PermissionError):
+except Exception:
     _CACHE_DIR = None
 
-_MEM_CACHE: dict[str, tuple[float, dict]] = {}
+_MEM_CACHE: Dict[str, Tuple[float, dict]] = {}
 
 
 def _cached_get(key: str, fetch):

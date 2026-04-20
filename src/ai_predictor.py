@@ -14,7 +14,7 @@ from typing import Optional
 
 try:
     from anthropic import Anthropic
-except ImportError:  # package optionnel pour exécution sans IA
+except Exception:  # import du SDK optionnel — ne doit jamais bloquer le boot
     Anthropic = None  # type: ignore
 
 MODEL_ID = "claude-opus-4-7"
@@ -44,7 +44,12 @@ Format de réponse: JSON strict avec les clés:
 class AIPredictor:
     def __init__(self, api_key: Optional[str] = None):
         self.api_key = api_key or os.getenv("ANTHROPIC_API_KEY", "")
-        self.client = Anthropic(api_key=self.api_key) if (Anthropic and self.api_key) else None
+        self.client = None
+        if Anthropic and self.api_key:
+            try:
+                self.client = Anthropic(api_key=self.api_key)
+            except Exception:
+                self.client = None
 
     @property
     def enabled(self) -> bool:

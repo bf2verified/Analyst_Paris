@@ -6,13 +6,16 @@ Les prédictions ne sont JAMAIS garanties. Utilisez cet outil de manière respon
 import os
 from flask import Flask, jsonify, render_template, request
 from flask_cors import CORS
-from dotenv import load_dotenv
+
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except Exception:
+    pass
 
 from src.data_fetcher import build_match_dossier, FootballDataClient
 from src.analyzer import analyse_match
 from src.ai_predictor import AIPredictor
-
-load_dotenv()
 
 app = Flask(__name__, static_folder="static", template_folder="templates")
 CORS(app)
