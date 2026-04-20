@@ -97,10 +97,17 @@ async function analyseMatch(data) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
     });
-    const json = await r.json();
+    const raw = await r.text();
     loading.classList.add('hidden');
+    let json;
+    try {
+      json = JSON.parse(raw);
+    } catch {
+      output.innerHTML = `<div class="error">Serveur a répondu en HTML (code ${r.status}). Extrait: <pre>${escapeHtml(raw.slice(0, 400))}</pre></div>`;
+      return;
+    }
     if (!r.ok) {
-      output.innerHTML = `<div class="error">${escapeHtml(json.error || 'Erreur')}</div>`;
+      output.innerHTML = `<div class="error">${escapeHtml(json.error || 'Erreur')}${json.details ? ' — ' + escapeHtml(json.details) : ''}</div>`;
       return;
     }
     renderResults(json);

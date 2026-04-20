@@ -100,29 +100,45 @@ def upcoming(competition: str):
 
 @app.route("/api/analyze", methods=["POST"])
 def analyze():
-    payload = request.get_json(force=True) or {}
-    home = payload.get("home", "").strip()
-    away = payload.get("away", "").strip()
-    competition = payload.get("competition", "PL").strip()
+    try:
+        payload = request.get_json(force=True, silent=True) or {}
+        home = (payload.get("home") or "").strip()
+        away = (payload.get("away") or "").strip()
+        competition = (payload.get("competition") or "PL").strip()
 
-    if not home or not away:
-        return jsonify({"error": "Les équipes 'home' et 'away' sont requises."}), 400
+        if not home or not away:
+            return jsonify({"error": "Les équipes 'home' et 'away' sont requises."}), 400
 
-    dossier = build_match_dossier(home, away, competition)
-    analysis = analyse_match(dossier.get("home_stats", {}), dossier.get("away_stats", {}))
-    ai_summary = predictor.synthesize(dossier, analysis)
+        dossier = build_match_dossier(home, away, competition)
+        analysis = analyse_match(dossier.get("home_stats", {}), dossier.get("away_stats", {}))
+        ai_summary = predictor.synthesize(dossier, analysis)
 
-    return jsonify({
-        "match": {"home": home, "away": away, "competition": competition},
-        "dossier": dossier,
-        "analysis": analysis,
-        "ai_summary": ai_summary,
-        "disclaimer": (
-            "Aucune prédiction n'est garantie. Ces probabilités sont issues d'un modèle "
-            "statistique (Poisson) et d'une synthèse IA — le sport reste imprévisible. "
-            "Jouez uniquement ce que vous pouvez perdre."
-        ),
-    })
+        return jsonify({
+            "match": {"home": home, "away": away, "competition": competition},
+            "dossier": dossier,
+            "analysis": analysis,
+            "ai_summary": ai_summary,
+            "disclaimer": (
+                "Aucune prédiction n'est garantie. Ces probabilités sont issues d'un modèle "
+                "statistique (Poisson) et d'une synthèse IA — le sport reste imprévisible. "
+                "Jouez uniquement ce que vous pouvez perdre."
+            ),
+        })
+    except Exception as exc:  # noqa: BLE001
+        app.logger.exception("analyze failed")
+        return jsonify({"error": f"Erreur serveur: {exc}"}), 500
+
+
+@app.errorhandler(500)
+def handle_500(exc):
+    return jsonify({"error": "Erreur interne du serveur", "details": str(exc)}), 500
+
+
+@app.errorhandler(404)
+def handle_404(exc):
+    if request.path.startswith("/api/"):
+        return jsonify({"error": "Endpoint introuvable", "path": request.path}), 404
+    return render_template("index.html"), 200
 
 
 @app.route("/api/health")

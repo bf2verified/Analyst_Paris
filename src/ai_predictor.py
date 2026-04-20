@@ -78,23 +78,31 @@ class AIPredictor:
             "warnings_donnees": dossier.get("warnings", []),
         }
 
-        message = self.client.messages.create(
-            model=MODEL_ID,
-            max_tokens=2000,
-            system=[
-                {
-                    "type": "text",
-                    "text": SYSTEM_PROMPT,
-                    "cache_control": {"type": "ephemeral"},
-                }
-            ],
-            messages=[
-                {
-                    "role": "user",
-                    "content": f"Analyse ce dossier de match et rends UNIQUEMENT un JSON valide:\n\n{json.dumps(user_payload, ensure_ascii=False, indent=2)}",
-                }
-            ],
-        )
+        try:
+            message = self.client.messages.create(
+                model=MODEL_ID,
+                max_tokens=2000,
+                system=[
+                    {
+                        "type": "text",
+                        "text": SYSTEM_PROMPT,
+                        "cache_control": {"type": "ephemeral"},
+                    }
+                ],
+                messages=[
+                    {
+                        "role": "user",
+                        "content": f"Analyse ce dossier de match et rends UNIQUEMENT un JSON valide:\n\n{json.dumps(user_payload, ensure_ascii=False, indent=2)}",
+                    }
+                ],
+            )
+        except Exception as exc:  # noqa: BLE001
+            return {
+                "resume": "Appel à Claude échoué — synthèse statistique uniquement.",
+                "paris_conseilles": [],
+                "risques": [f"Erreur API Anthropic: {exc}"],
+                "conseil_gestion": "Jouez de manière responsable.",
+            }
 
         text = "".join(block.text for block in message.content if getattr(block, "type", "") == "text")
         try:
