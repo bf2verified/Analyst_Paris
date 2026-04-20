@@ -1,4 +1,5 @@
 """Analyse statistique des marchés de paris avec modèle de Poisson."""
+import random
 from math import exp, factorial
 from typing import Dict, List, Tuple
 
@@ -161,6 +162,48 @@ def _poisson_over(lam: float, threshold: int) -> float:
     return max(0.0, 1 - total)
 
 
+def _sample_poisson(rng: random.Random, lam: float) -> int:
+    """Knuth — acceptable pour lam <= ~10 (notre cas)."""
+    L = exp(-lam)
+    k, p = 0, 1.0
+    while True:
+        k += 1
+        p *= rng.random()
+        if p <= L:
+            return k - 1
+
+
+def goal_minutes_total(lam_h: float, lam_a: float, n_sim: int = 10000) -> Dict[str, float]:
+    """Somme des minutes où les buts sont marqués.
+
+    Ex: but 1 à 11', but 2 à 58' → total = 69'.
+    Monte Carlo: buts ~ Poisson(lam_total), chaque minute ~ Uniforme(1, 90).
+    """
+    lam_total = lam_h + lam_a
+    rng = random.Random(42)
+    totals: List[int] = []
+    for _ in range(n_sim):
+        n = _sample_poisson(rng, lam_total)
+        totals.append(sum(rng.randint(1, 90) for _ in range(n)))
+
+    totals.sort()
+    mean = sum(totals) / len(totals) if totals else 0.0
+
+    def p_over(t: float) -> float:
+        count = sum(1 for x in totals if x > t)
+        return round(count / len(totals), 3)
+
+    thresholds = [50.5, 75.5, 100.5, 125.5, 150.5, 175.5, 200.5]
+    result = {
+        "expected_sum_minutes": round(mean, 1),
+        "note": "Somme des minutes des buts (ex: 11' + 58' = 69). Les buts en temps additionnel comptent ≤ 90.",
+    }
+    for t in thresholds:
+        result[f"prob_over_{t}"] = p_over(t)
+        result[f"prob_under_{t}"] = round(1 - p_over(t), 3)
+    return result
+
+
 def goal_minutes_distribution(lam_h: float, lam_a: float) -> Dict[str, float]:
     """Distribution approximative des minutes du premier but et des intervalles."""
     lam_total = lam_h + lam_a
@@ -224,6 +267,7 @@ def analyse_match(home_stats: dict, away_stats: dict) -> dict:
         "corners": corners_expectation(home_stats, away_stats),
         "cards": cards_expectation(home_stats, away_stats),
         "goal_minutes": goal_minutes_distribution(lam_h, lam_a),
+        "goal_minutes_total": goal_minutes_total(lam_h, lam_a),
         "consecutive_goals": consecutive_goals(lam_h, lam_a),
         "goal_origin": goal_from_shot_estimate(home_stats, away_stats),
     }

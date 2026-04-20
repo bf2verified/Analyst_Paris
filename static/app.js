@@ -219,7 +219,7 @@ function renderResults(data) {
     </div><p class="pick-meta">${escapeHtml(ca.note)}</p></div>`;
 
   const gm = analysis.goal_minutes;
-  html += `<div class="card"><h3>Minutes des buts</h3><div class="market-grid">
+  html += `<div class="card"><h3>Minutes des buts (par intervalle)</h3><div class="market-grid">
     ${pill('0-15', gm.prob_goal_0_15)}
     ${pill('16-30', gm.prob_goal_16_30)}
     ${pill('31-45', gm.prob_goal_31_45)}
@@ -227,6 +227,29 @@ function renderResults(data) {
     ${pill('61-75', gm.prob_goal_61_75)}
     ${pill('76-90', gm.prob_goal_76_90)}
     </div></div>`;
+
+  const gmt = analysis.goal_minutes_total;
+  html += `<div class="card"><h3>Total des minutes des buts</h3>
+    <p class="sub-stat">Somme attendue: <strong>${gmt.expected_sum_minutes}'</strong> (ex: but 11' + but 58' = 69')</p>
+    <h4 class="sub-head">Plus de</h4>
+    <div class="market-grid">
+      ${pill('Over 50.5\'', gmt['prob_over_50.5'])}
+      ${pill('Over 75.5\'', gmt['prob_over_75.5'])}
+      ${pill('Over 100.5\'', gmt['prob_over_100.5'])}
+      ${pill('Over 125.5\'', gmt['prob_over_125.5'])}
+      ${pill('Over 150.5\'', gmt['prob_over_150.5'])}
+      ${pill('Over 175.5\'', gmt['prob_over_175.5'])}
+    </div>
+    <h4 class="sub-head">Moins de</h4>
+    <div class="market-grid">
+      ${pill('Under 50.5\'', gmt['prob_under_50.5'])}
+      ${pill('Under 75.5\'', gmt['prob_under_75.5'])}
+      ${pill('Under 100.5\'', gmt['prob_under_100.5'])}
+      ${pill('Under 125.5\'', gmt['prob_under_125.5'])}
+      ${pill('Under 150.5\'', gmt['prob_under_150.5'])}
+      ${pill('Under 175.5\'', gmt['prob_under_175.5'])}
+    </div>
+    <p class="pick-meta">${escapeHtml(gmt.note)}</p></div>`;
 
   const cg = analysis.consecutive_goals;
   html += `<div class="card"><h3>Buts consécutifs</h3><div class="market-grid">
