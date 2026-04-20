@@ -114,6 +114,33 @@ Ne jouez jamais de l'argent dont vous avez besoin. Fixez-vous une limite
 - Les cotes 1xBet ne sont pas importées — pour détecter des paris à valeur
   réelle, comparer `probabilité × cote > 1.0`.
 
+## Déploiement
+
+### Railway
+
+1. `railway init` puis connecter ce repo.
+2. Ajouter les variables: `ANTHROPIC_API_KEY`, `FOOTBALL_DATA_API_KEY`, (optionnel) `API_FOOTBALL_KEY`.
+3. Le `Procfile` + `railway.json` configurent gunicorn + healthcheck `/api/health`.
+
+### Fly.io
+
+```bash
+fly launch --no-deploy          # utilise fly.toml + Dockerfile fournis
+fly secrets set ANTHROPIC_API_KEY=sk-ant-... FOOTBALL_DATA_API_KEY=...
+fly deploy
+```
+
+### Docker local
+
+```bash
+docker build -t analyst-paris .
+docker run -p 8080:8080 --env-file .env analyst-paris
+```
+
+> Note : le cache bascule automatiquement en mémoire sur les filesystems éphémères
+> (Fly, Railway, Vercel). Pour un cache persistant, montez un volume et définissez
+> `CACHE_DIR=/data/cache`.
+
 ## Licence
 
 MIT

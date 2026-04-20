@@ -5,25 +5,43 @@ import json
 from pathlib import Path
 import requests
 
-CACHE_DIR = Path(__file__).resolve().parent.parent / "cache"
-CACHE_DIR.mkdir(exist_ok=True)
 CACHE_TTL = 60 * 30  # 30 minutes
 
 FOOTBALL_DATA_BASE = "https://api.football-data.org/v4"
 API_FOOTBALL_BASE = "https://v3.football.api-sports.io"
 
+# Cache: essaie le disque, sinon mémoire (filesystems éphémères: Fly, Railway, Vercel).
+_CACHE_DIR: Path | None
+try:
+    _CACHE_DIR = Path(os.getenv("CACHE_DIR", Path(__file__).resolve().parent.parent / "cache"))
+    _CACHE_DIR.mkdir(exist_ok=True, parents=True)
+    # test d'écriture
+    (_CACHE_DIR / ".probe").write_text("ok")
+    (_CACHE_DIR / ".probe").unlink()
+except (OSError, PermissionError):
+    _CACHE_DIR = None
 
-def _cache_path(key: str) -> Path:
-    safe = "".join(c if c.isalnum() else "_" for c in key)
-    return CACHE_DIR / f"{safe}.json"
+_MEM_CACHE: dict[str, tuple[float, dict]] = {}
 
 
 def _cached_get(key: str, fetch):
-    path = _cache_path(key)
-    if path.exists() and time.time() - path.stat().st_mtime < CACHE_TTL:
-        return json.loads(path.read_text())
+    now = time.time()
+    if _CACHE_DIR is not None:
+        safe = "".join(c if c.isalnum() else "_" for c in key)
+        path = _CACHE_DIR / f"{safe}.json"
+        if path.exists() and now - path.stat().st_mtime < CACHE_TTL:
+            return json.loads(path.read_text())
+        data = fetch()
+        try:
+            path.write_text(json.dumps(data))
+        except OSError:
+            pass
+        return data
+    cached = _MEM_CACHE.get(key)
+    if cached and now - cached[0] < CACHE_TTL:
+        return cached[1]
     data = fetch()
-    path.write_text(json.dumps(data))
+    _MEM_CACHE[key] = (now, data)
     return data
 
 
